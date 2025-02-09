@@ -1,64 +1,149 @@
 // src/components/FactoryMap.jsx
 import React, { useState, useEffect } from 'react';
 import { MapContainer, TileLayer, GeoJSON } from 'react-leaflet';
+import { EmployeeTracker } from './EmployeeTracker';
 import 'leaflet/dist/leaflet.css';
 
-const factoryGeoJSON = {
-  "type": "FeatureCollection",
-  "name": "usine1",
-  "features": [
-    {
-      "type": "Feature",
-      "properties": {
-        "Layer": "FURNI",
-        "SubClasses": "AcDbEntity:AcDbLine",
-        "Linetype": "Continuous"
-      },
-      "geometry": {
-        "type": "Polygon",
-        "coordinates": [[
-          [31.6295, -7.9811],
-          [31.6296, -7.9811],
-          [31.6296, -7.9812],
-          [31.6295, -7.9812],
-          [31.6295, -7.9811]
-        ]]
+export const FactoryMap = () => {
+  const [zonesData, setZonesData] = useState(null);
+  const [routesData, setRoutesData] = useState(null);
+  const [factoryData, setFactoryData] = useState(null);
+
+  useEffect(() => {
+    const loadGeoData = async () => {
+      try {
+        const zonesResponse = await fetch('/safeindustech/zones.geojson');
+        const zonesJson = await zonesResponse.json();
+        setZonesData(zonesJson);
+
+        const routesResponse = await fetch('/safeindustech/routes.geojson');
+        const routesJson = await routesResponse.json();
+        setRoutesData(routesJson);
+
+        const factoryResponse = await fetch('/safeindustech/usine.geojson');
+        const factoryJson = await factoryResponse.json();
+        setFactoryData(factoryJson);
+      } catch (error) {
+        console.error('Error loading GeoJSON:', error);
+      }
+    };
+
+    loadGeoData();
+  }, []);
+
+  const zoneStyle = (feature) => {
+    // Mock sensor data - replace with real data
+    const sensorData = {
+      1: { temp: 25, smoke: false },
+      2: { temp: 45, smoke: true },
+      3: { temp: 30, smoke: false },
+      4: { temp: 35, smoke: false }
+    };
+
+    const data = sensorData[feature.properties.zone];
+    let color = '#4CAF50'; // Default green
+
+    if (data) {
+      if (data.smoke) {
+        color = '#F44336'; // Red for smoke
+      } else if (data.temp > 40) {
+        color = '#FF9800'; // Orange for high temperature
+      } else if (data.temp > 30) {
+        color = '#FFC107'; // Yellow for elevated temperature
       }
     }
-  ]
-};
 
-export const FactoryMap = () => {
-  const mapStyle = {
-    fillColor: '#ff7800',
+    return {
+      fillColor: color,
+      weight: 2,
+      opacity: 1,
+      color: '#333',
+      fillOpacity: 0.5
+    };
+  };
+
+  const routeStyle = {
+    color: '#2196F3',
     weight: 2,
+    opacity: 0.3,
+    dashArray: '5, 5'
+  };
+
+  const factoryStyle = {
+    fillColor: '#gray',
+    weight: 1,
     opacity: 1,
-    color: '#333',
-    fillOpacity: 0.7
+    color: '#000',
+    fillOpacity: 0.2
   };
 
   return (
-    <div className="h-full w-full relative">
+    <div className="h-screen w-full relative">
       <MapContainer
-        center={[31.6295, -7.9811]}
-        zoom={18}
-        scrollWheelZoom={true}
+        center={[30.97, -9.76]}
+        zoom={15}
         className="h-full w-full"
       >
         <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          attribution='&copy; OpenStreetMap contributors'
         />
-        <GeoJSON
-          data={factoryGeoJSON}
-          style={mapStyle}
-          onEachFeature={(feature, layer) => {
-            if (feature.properties && feature.properties.Layer) {
-              layer.bindPopup(feature.properties.Layer);
-            }
-          }}
-        />
+        
+        {factoryData && (
+          <GeoJSON 
+            data={factoryData}
+            style={factoryStyle}
+          />
+        )}
+
+        {zonesData && (
+          <GeoJSON 
+            data={zonesData}
+            style={zoneStyle}
+            onEachFeature={(feature, layer) => {
+              layer.bindPopup(`Zone ${feature.properties.zone}`);
+            }}
+          />
+        )}
+
+        {routesData && (
+          <>
+            <GeoJSON 
+              data={routesData}
+              style={routeStyle}
+            />
+            {routesData.features.map(route => (
+              <EmployeeTracker 
+                key={route.properties.id} 
+                route={route}
+              />
+            ))}
+          </>
+        )}
       </MapContainer>
+
+      {/* Legend */}
+      <div className="absolute bottom-4 right-4 bg-white p-4 rounded shadow-lg z-[1000]">
+        <h3 className="font-bold mb-2">Zone Status</h3>
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 rounded bg-green-500 opacity-50"></div>
+            <span>Normal</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 rounded bg-yellow-500 opacity-50"></div>
+            <span>Elevated Temperature</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 rounded bg-orange-500 opacity-50"></div>
+            <span>High Temperature</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 rounded bg-red-500 opacity-50"></div>
+            <span>Smoke Detected</span>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };
