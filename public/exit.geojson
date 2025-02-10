@@ -1,0 +1,26 @@
+{
+"type": "FeatureCollection",
+"name": "exit",
+"crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:OGC:1.3:CRS84" } },
+"features": [
+{ "type": "Feature", "properties": { "id": 1, "zone": null }, "geometry": { "type": "MultiLineString", "coordinates": [ [ [ -4.993423550915123, 30.996648710403626 ], [ -4.993728833149516, 30.996643622366388 ] ] ] } },
+{ "type": "Feature", "properties": { "id": 1, "zone": "zone de cafetiria" }, "geometry": { "type": "MultiLineString", "coordinates": [ [ [ -4.993410830822023, 30.996620726198806 ], [ -4.993726268818271, 30.996619659511079 ] ] ] } },
+{ "type": "Feature", "properties": { "id": 2, "zone": "Zone de raffinage" }, "geometry": { "type": "MultiLineString", "coordinates": [ [ [ -4.994156276748289, 30.996618381545304 ], [ -4.994430947855041, 30.99661944486051 ] ] ] } },
+{ "type": "Feature", "properties": { "id": 3, "zone": "Zone laboratoire" }, "geometry": { "type": "MultiLineString", "coordinates": [ [ [ -4.995448827055781, 30.991618930958911 ], [ -4.995442747215586, 30.991431034945329 ] ] ] } },
+{ "type": "Feature", "properties": { "id": 4, "zone": "zone de stockage d'huile" }, "geometry": { "type": "MultiLineString", "coordinates": [ [ [ -4.998481280321694, 30.991921922072425 ], [ -4.998481043964003, 30.991545404271051 ] ] ] } },
+{ "type": "Feature", "properties": { "id": 5, "zone": "zone de stockage d'huile" }, "geometry": { "type": "MultiLineString", "coordinates": [ [ [ -4.998285156269375, 30.995772688801623 ], [ -4.997842519288852, 30.995771192419259 ] ] ] } },
+{ "type": "Feature", "properties": { "id": 6, "zone": "administration" }, "geometry": { "type": "MultiLineString", "coordinates": [ [ [ -4.992970714335264, 30.996621941394515 ], [ -4.992868957757817, 30.996621974645038 ] ] ] } },
+{ "type": "Feature", "properties": { "id": 6, "zone": "administration" }, "geometry": { "type": "MultiLineString", "coordinates": [ [ [ -4.990743258197765, 30.992789434157185 ], [ -4.990743258197766, 30.992952251348861 ] ] ] } },
+{ "type": "Feature", "properties": { "id": 8, "zone": "Zone de gestion de dechet" }, "geometry": { "type": "MultiLineString", "coordinates": [ [ [ -4.994362324259292, 30.99168183733239 ], [ -4.994245317482211, 30.99168222374843 ] ] ] } },
+{ "type": "Feature", "properties": { "id": 9, "zone": "zone de gestion de dechet" }, "geometry": { "type": "MultiLineString", "coordinates": [ [ [ -4.990831293962239, 30.991761323763441 ], [ -4.990640372696282, 30.991799789474506 ] ] ] } },
+{ "type": "Feature", "properties": { "id": 10, "zone": "zone de gestion de dechet" }, "geometry": { "type": "MultiLineString", "coordinates": [ [ [ -4.990790453427019, 30.991442302730885 ], [ -4.99066829878135, 30.991441774072218 ] ] ] } },
+{ "type": "Feature", "properties": { "id": 11, "zone": "zone de gestion de dechet" }, "geometry": { "type": "MultiLineString", "coordinates": [ [ [ -4.992973462477745, 30.991377504312776 ], [ -4.992787812645299, 30.991382438527594 ] ] ] } },
+{ "type": "Feature", "properties": { "id": 12, "zone": "zone decharge" }, "geometry": { "type": "MultiLineString", "coordinates": [ [ [ -4.990040006150608, 30.991738754467143 ], [ -4.990023701562533, 30.991512942954692 ] ] ] } },
+{ "type": "Feature", "properties": { "id": 13, "zone": "zone decharge" }, "geometry": { "type": "MultiLineString", "coordinates": [ [ [ -4.990505532060794, 30.990537520711325 ], [ -4.990246020281968, 30.99053586777006 ] ] ] } },
+{ "type": "Feature", "properties": { "id": 14, "zone": "zone de gestion de dechet" }, "geometry": { "type": "MultiLineString", "coordinates": [ [ [ -4.991058870207654, 30.990532982491924 ], [ -4.991243326957836, 30.990530345622666 ] ] ] } },
+{ "type": "Feature", "properties": { "id": 15, "zone": "zone decharge" }, "geometry": { "type": "MultiLineString", "coordinates": [ [ [ -4.994998291041632, 30.991383867034934 ], [ -4.994816395245188, 30.991383338652081 ] ] ] } },
+{ "type": "Feature", "properties": { "id": 16, "zone": "zone decharge" }, "geometry": { "type": "MultiLineString", "coordinates": [ [ [ -4.994979842688053, 30.990519299809478 ], [ -4.994783919829261, 30.990518314565218 ] ] ] } },
+{ "type": "Feature", "properties": { "id": 17, "zone": "zone d'extraction" }, "geometry": { "type": "MultiLineString", "coordinates": [ [ [ -4.99357554999458, 30.999280610734676 ], [ -4.994145374711583, 30.999282311703979 ] ] ] } },
+{ "type": "Feature", "properties": { "id": 18, "zone": "zone de pretraitement" }, "geometry": { "type": "MultiLineString", "coordinates": [ [ [ -4.99949802492547, 30.999472125859565 ], [ -4.998877278758129, 30.999472943347932 ] ] ] } }
+]
+}

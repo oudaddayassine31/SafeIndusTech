@@ -1,0 +1,73 @@
+/* src/styles/map.css */
+@import 'leaflet/dist/leaflet.css';
+
+.leaflet-container {
+  width: 100%;
+  height: 100%;
+  min-height: 600px;
+}
+
+/* Custom marker animations */
+.sensor-ping {
+  animation: ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+@keyframes ping {
+  75%, 100% {
+    transform: scale(2);
+    opacity: 0;
+  }
+}
+
+/* Custom popup styling */
+.leaflet-popup-content-wrapper {
+  border-radius: 0.5rem;
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+}
+
+.leaflet-popup-content {
+  margin: 0;
+  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI";
+}
+
+/* Zone hover effect */
+.leaflet-interactive {
+  transition: opacity 0.2s ease;
+}
+
+.leaflet-interactive:hover {
+  opacity: 0.9;
+}
+
+/* Custom icon hover effects */
+.custom-sensor-icon,
+.custom-extinguisher-icon,
+.custom-exit-icon {
+  transition: transform 0.2s ease;
+}
+
+.custom-sensor-icon:hover,
+.custom-extinguisher-icon:hover,
+.custom-exit-icon:hover {
+  transform: scale(1.2);
+  z-index: 1000 !important;
+}
+
+/* Status indicators */
+.status-indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  margin-right: 8px;
+}
+
+.status-indicator.active {
+  background-color: #22c55e;
+  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.2);
+}
+
+.status-indicator.warning {
+  background-color: #f59e0b;
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.2);
+}
