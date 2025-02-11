@@ -73,7 +73,7 @@ export const transformFireData = (zonesData, previousData = {}) => {
       name: zone.name,
       risk_level: zone.risk_level,
       isAlert: zone.properties.spark_detected || 
-               zone.properties.current_temp > 70 ||
+               zone.properties.current_temp > 80 ||
                zone.properties.current_smoke > 0.3
     };
 
