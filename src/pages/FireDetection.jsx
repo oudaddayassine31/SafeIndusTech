@@ -1,34 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { FireSensor } from '../components/FireSensor';
+import { fetchZonesData, transformFireData } from '../api/sensorData';
 
 export const FireDetection = () => {
   const [sensors, setSensors] = useState({});
 
   useEffect(() => {
-    // Simulate data - replace with actual API calls
-    const zones = [1, 2, 3];
-    const mockSensors = {};
-    
-    zones.forEach(zone => {
-      mockSensors[zone] = {
-        status: Math.random() > 0.9 ? 'Alert' : 'Normal'
-      };
-    });
-    
-    setSensors(mockSensors);
+    const fetchData = async () => {
+      try {
+        const zonesData = await fetchZonesData();
+        setSensors(transformFireData(zonesData));
+      } catch (error) {
+        console.error('Error fetching fire detection data:', error);
+      }
+    };
 
-    // Simulate real-time updates
-    const interval = setInterval(() => {
-      setSensors(prev => {
-        const newSensors = { ...prev };
-        Object.keys(newSensors).forEach(zone => {
-          if (Math.random() > 0.95) {
-            newSensors[zone].status = newSensors[zone].status === 'Alert' ? 'Normal' : 'Alert';
-          }
-        });
-        return newSensors;
-      });
-    }, 5000);
+    fetchData();
+    const interval = setInterval(fetchData, 5000);
 
     return () => clearInterval(interval);
   }, []);

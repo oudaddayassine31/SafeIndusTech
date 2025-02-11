@@ -1,22 +1,25 @@
+
 import React, { useState, useEffect } from 'react';
-import { SmokeSensor } from '../components/SmokeSensor.jsx';
+import { SmokeSensor } from '../components/SmokeSensor';
+import { fetchZonesData, transformSmokeData } from '../api/sensorData';
 
 export const SmokeDetection = () => {
   const [data, setData] = useState({});
 
   useEffect(() => {
-    // Simulate data - replace with actual API calls
-    const zones = [1, 2, 3];
-    const mockData = {};
-    
-    zones.forEach(zone => {
-      mockData[zone] = Array.from({ length: 24 }, (_, i) => ({
-        time: `${i}:00`,
-        value: Math.round(Math.random() * 150)
-      }));
-    });
-    
-    setData(mockData);
+    const fetchData = async () => {
+      try {
+        const zonesData = await fetchZonesData();
+        setData(transformSmokeData(zonesData));
+      } catch (error) {
+        console.error('Error fetching smoke data:', error);
+      }
+    };
+
+    fetchData();
+    const interval = setInterval(fetchData, 5000);
+
+    return () => clearInterval(interval);
   }, []);
 
   return (
