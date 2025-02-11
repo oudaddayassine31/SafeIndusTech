@@ -55,28 +55,45 @@ const MovingEmployee = ({ route, speed = 0.3 }) => {
     };
   }, [routeIndex]);
 
-  const employeeIcon = L.divIcon({
-    className: 'employee-marker',
-    html: `
-      <div class="relative group">
-        <div class="absolute -top-1 -left-1 w-8 h-8 rounded-full bg-blue-500 opacity-75 
-                    animate-ping"></div>
-        <div class="relative w-6 h-6 bg-blue-500 rounded-full border-2 border-white shadow-lg 
-                    flex items-center justify-center">
-          <svg class="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
-            <path fill-rule="evenodd" clip-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" />
-          </svg>
-        </div>
-        <div class="absolute -top-10 left-1/2 transform -translate-x-1/2 bg-white px-2 py-1 
-                    rounded shadow-md text-sm font-medium text-gray-900 opacity-0 
-                    group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap">
-          ${route.properties.employee}  
-        </div>
+// Update the employeeIcon in MovingEmployee component
+const employeeIcon = L.divIcon({
+  className: 'employee-marker',
+  html: `
+    <div class="relative group">
+      <!-- Main pulse animation -->
+      <div class="absolute -top-1.5 -left-1.5 w-9 h-9 rounded-full bg-blue-500/20 
+                  animate-ping"></div>
+      <!-- Secondary glow -->
+      <div class="absolute -top-1 -left-1 w-8 h-8 rounded-full bg-blue-400/30"></div>
+      <!-- Main icon container -->
+      <div class="relative w-6 h-6 bg-gradient-to-br from-blue-500 to-blue-600 
+                  rounded-full border-2 border-white shadow-lg flex items-center 
+                  justify-center transform hover:scale-110 transition-all duration-200">
+        <!-- Person icon -->
+        <svg class="w-4 h-4 text-white drop-shadow-md" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2a7.2 7.2 0 01-6-3.22c.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08a7.2 7.2 0 01-6 3.22z"/>
+        </svg>
       </div>
-    `,
-    iconSize: [24, 24],
-  });
-  
+      <!-- Enhanced tooltip -->
+      <div class="absolute -top-12 left-1/2 transform -translate-x-1/2 
+                  bg-gradient-to-r from-blue-700 to-blue-600 text-white 
+                  px-3 py-1.5 rounded-full text-sm font-medium shadow-lg
+                  opacity-0 group-hover:opacity-100 transition-all duration-300
+                  whitespace-nowrap backdrop-blur-sm">
+        <div class="flex items-center gap-2">
+          <span>${route.properties.employee}</span>
+          <div class="w-1.5 h-1.5 rounded-full bg-blue-300 animate-pulse"></div>
+        </div>
+        <!-- Tooltip arrow -->
+        <div class="absolute -bottom-1 left-1/2 transform -translate-x-1/2 
+                    w-2 h-2 bg-blue-600 rotate-45"></div>
+      </div>
+    </div>
+  `,
+  iconSize: [24, 24],
+  iconAnchor: [12, 12],
+  popupAnchor: [0, -12]
+});
 
   return position[0] !== 0 ? (
     <Marker position={position} icon={employeeIcon}>
@@ -247,28 +264,37 @@ export const FactoryMap = () => {
   };
 
   const getZoneStyle = (feature) => {
-    const zone = mapData.zones?.features.find(
-      z => z.properties.name === feature.properties.name
+    // Get the zone data from API response that matches this feature
+    const zoneData = Object.values(mapData.sensors?.features || []).filter(
+      sensor => sensor.properties.name === feature.properties.name
     );
-    
-    if (!zone) return { fillOpacity: 0 };
   
-    // Check if any sensor in the zone is in alert state
-    const isInDanger = zone.properties.current_temp > 70 ||
-                      zone.properties.current_pressure > 2.0 ||
-                      zone.properties.current_smoke > 0.3 ||
-                      zone.properties.spark_detected;
+    // Check for threshold violations
+    const hasTemperatureAlert = zoneData.some(sensor => 
+      sensor.properties.Descrip === 'Heat' && sensor.properties.current_temp > 70
+    );
+    const hasSmokeAlert = zoneData.some(sensor => 
+      sensor.properties.Descrip === 'Smoke' && sensor.properties.current_smoke > 0.3
+    );
+    const hasSparkAlert = zoneData.some(sensor => 
+      sensor.properties.Descrip === 'Spark' && sensor.properties.spark_detected
+    );
+    const hasPressureAlert = zoneData.some(sensor => 
+      sensor.properties.Descrip === 'Pressure' && sensor.properties.current_pressure > 2.0
+    );
   
-    if (isInDanger) {
+    // If any threshold is exceeded, show danger style
+    if (hasTemperatureAlert || hasSmokeAlert || hasSparkAlert || hasPressureAlert) {
       return {
         fillColor: '#ef4444',
         fillOpacity: 0.6,
         weight: 2,
         color: '#dc2626',
-        className: 'danger-zone animate-pulse'
+        className: 'danger-zone'
       };
     }
   
+    // Default zone styling based on risk level
     const riskColors = {
       'HIGH': '#ef4444',
       'MEDIUM': '#f97316',
@@ -406,10 +432,13 @@ export const FactoryMap = () => {
             style={getWallStyle}
           />
         )}
+
   
-        {mapData.sensors?.features?.map((sensor) => (
+        {mapData.sensors?.features?.map((sensor) => {
+        const uniqueKey = `sensor-${sensor.properties.id}-${sensor.properties.name}-${sensor.properties.Descrip}`;
+        return (
           <Marker
-            key={`sensor-${sensor.properties.id}`}
+            key={uniqueKey}
             position={[
               sensor.geometry.coordinates[1],
               sensor.geometry.coordinates[0]
@@ -423,7 +452,8 @@ export const FactoryMap = () => {
               </div>
             </Popup>
           </Marker>
-        ))}
+        );
+      })}
   
         {mapData.equipement?.features?.map((equip) => (
           <Marker

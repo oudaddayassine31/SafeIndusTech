@@ -1,15 +1,10 @@
 // src/pages/Notifications.jsx
-import React, { useState, useEffect } from 'react';
-import { Thermometer, Wind, Gauge, Zap } from 'lucide-react';
-import { alertService } from '../services/AlertService';
+import React from 'react';
+import { Thermometer, Wind, Gauge, Zap, Trash2 } from 'lucide-react';
+import { useAlert } from '../contexts/AlertContext';
 
 export const Notifications = () => {
-  const [alerts, setAlerts] = useState([]);
-
-  useEffect(() => {
-    setAlerts(alertService.getAlerts());
-    return alertService.subscribe(setAlerts);
-  }, []);
+  const { alertHistory, acknowledgeAlert, deleteAlert } = useAlert();
 
   const getAlertIcon = (type) => {
     switch (type) {
@@ -21,15 +16,11 @@ export const Notifications = () => {
     }
   };
 
-  const handleAcknowledge = (alertId) => {
-    alertService.acknowledgeAlert(alertId);
-  };
-
   return (
     <div className="p-6 max-w-4xl mx-auto">
       <h2 className="text-2xl font-bold mb-6">Alert History</h2>
       <div className="space-y-4">
-        {alerts.map((alert) => {
+        {alertHistory.map((alert) => {
           const Icon = getAlertIcon(alert.type);
           return (
             <div
@@ -61,19 +52,29 @@ export const Notifications = () => {
                     </p>
                   </div>
                 </div>
-                {!alert.acknowledged && (
+                <div className="flex gap-2">
+                  {!alert.acknowledged && (
+                    <button
+                      onClick={() => acknowledgeAlert(alert.id)}
+                      className="px-3 py-1 text-sm font-medium text-red-600 
+                               hover:bg-red-50 rounded-md"
+                    >
+                      Acknowledge
+                    </button>
+                  )}
                   <button
-                    onClick={() => handleAcknowledge(alert.id)}
-                    className="px-3 py-1 text-sm font-medium text-red-600 hover:bg-red-50 rounded-md"
+                    onClick={() => deleteAlert(alert.id)}
+                    className="p-1 text-gray-400 hover:text-red-500 
+                             hover:bg-gray-100 rounded-full transition-colors"
                   >
-                    Acknowledge
+                    <Trash2 className="h-5 w-5" />
                   </button>
-                )}
+                </div>
               </div>
             </div>
           );
         })}
-        {alerts.length === 0 && (
+        {alertHistory.length === 0 && (
           <div className="text-center py-12 text-gray-500">
             No alerts to display
           </div>
