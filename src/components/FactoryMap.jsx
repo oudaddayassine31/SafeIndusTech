@@ -264,47 +264,92 @@ export const FactoryMap = () => {
   };
 
   const getZoneStyle = (feature) => {
-    // Get the zone data from API response that matches this feature
-    const zoneData = Object.values(mapData.sensors?.features || []).filter(
+    // Get current sensor values for this zone
+    const zoneSensors = mapData.sensors?.features.filter(
       sensor => sensor.properties.name === feature.properties.name
-    );
+    ) || [];
   
-    // Check for threshold violations
-    const hasTemperatureAlert = zoneData.some(sensor => 
+    // Check for different types of dangers
+    const hasTempDanger = zoneSensors.some(sensor => 
       sensor.properties.Descrip === 'Heat' && sensor.properties.current_temp > 70
     );
-    const hasSmokeAlert = zoneData.some(sensor => 
+    
+    const hasSmokeDanger = zoneSensors.some(sensor => 
       sensor.properties.Descrip === 'Smoke' && sensor.properties.current_smoke > 0.3
     );
-    const hasSparkAlert = zoneData.some(sensor => 
-      sensor.properties.Descrip === 'Spark' && sensor.properties.spark_detected
-    );
-    const hasPressureAlert = zoneData.some(sensor => 
+    
+    const hasPressureDanger = zoneSensors.some(sensor => 
       sensor.properties.Descrip === 'Pressure' && sensor.properties.current_pressure > 2.0
     );
+    
+    const hasSparkDanger = zoneSensors.some(sensor => 
+      sensor.properties.Descrip === 'Spark' && sensor.properties.spark_detected === true
+    );
   
-    // If any threshold is exceeded, show danger style
-    if (hasTemperatureAlert || hasSmokeAlert || hasSparkAlert || hasPressureAlert) {
+    // If multiple dangers, use different styles
+    if (hasTempDanger && hasSmokeDanger) {
       return {
-        fillColor: '#ef4444',
-        fillOpacity: 0.6,
-        weight: 2,
+        fillColor: '#7f1d1d', // dark red
+        fillOpacity: 0.7,
+        weight: 3,
         color: '#dc2626',
-        className: 'danger-zone'
+        className: 'danger-zone animate-pulse'
       };
     }
   
-    // Default zone styling based on risk level
+    // Individual danger types
+    if (hasTempDanger) {
+      return {
+        fillColor: '#ef4444', // red
+        fillOpacity: 0.6,
+        weight: 2,
+        color: '#dc2626',
+        className: 'danger-zone animate-pulse'
+      };
+    }
+  
+    if (hasSmokeDanger) {
+      return {
+        fillColor: '#6b7280', // gray
+        fillOpacity: 0.6,
+        weight: 2,
+        color: '#4b5563',
+        className: 'danger-zone animate-pulse'
+      };
+    }
+  
+    if (hasPressureDanger) {
+      return {
+        fillColor: '#3b82f6', // blue
+        fillOpacity: 0.6,
+        weight: 2,
+        color: '#2563eb',
+        className: 'danger-zone animate-pulse'
+      };
+    }
+  
+    if (hasSparkDanger) {
+      return {
+        fillColor: '#f59e0b', // amber
+        fillOpacity: 0.6,
+        weight: 2,
+        color: '#d97706',
+        className: 'danger-zone animate-pulse'
+      };
+    }
+  
+    // Regular zone styling based on risk level
     const riskColors = {
-      'HIGH': '#ef4444',
-      'MEDIUM': '#f97316',
-      'LOW': '#22c55e'
+      'HIGH': 'rgba(239, 68, 68, 0.3)',    // red with transparency
+      'MEDIUM': 'rgba(249, 115, 22, 0.3)',  // orange with transparency
+      'LOW': 'rgba(34, 197, 94, 0.3)'       // green with transparency
     };
   
     return {
       fillColor: riskColors[feature.properties.risk_level] || '#64748b',
       weight: 0,
-      fillOpacity: 0.25
+      fillOpacity: 0.25,
+      className: 'zone-hover transition-opacity duration-300'
     };
   };
 

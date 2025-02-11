@@ -4,10 +4,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { AlertTriangle, Zap } from 'lucide-react';
 import { fetchZonesData } from '../api/sensorData';
 import { alertService } from '../services/AlertService';
+import { useAlert } from '../contexts/AlertContext';
 
 export const SparkDetection = () => {
   const [data, setData] = useState({});
   const [error, setError] = useState(null);
+  const { triggerAlert } = useAlert();
 
   useEffect(() => {
     const fetchData = async () => {

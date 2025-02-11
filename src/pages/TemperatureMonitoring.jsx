@@ -1,18 +1,35 @@
 // src/pages/TemperatureMonitoring.jsx
 import React, { useState, useEffect } from 'react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { AlertTriangle, Thermometer } from 'lucide-react';
 import { fetchZonesData, transformTemperatureData } from '../api/sensorData';
+import { useAlert } from '../contexts/AlertContext';
 
 export const TemperatureMonitoring = () => {
   const [data, setData] = useState({});
   const [error, setError] = useState(null);
+  const { triggerAlert } = useAlert();
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         const zonesData = await fetchZonesData();
+        
+        // Check for alerts before updating data
+        zonesData.forEach(zone => {
+          if (zone.properties.current_temp > 70) {
+            triggerAlert({
+              type: 'temperature',
+              message: `High temperature detected in ${zone.name}`,
+              zoneName: zone.name,
+              value: `${zone.properties.current_temp.toFixed(1)}°C`,
+              threshold: '70°C',
+              severity: 'critical'
+            });
+          }
+        });
+
         setData(prev => transformTemperatureData(zonesData, prev));
         setError(null);
       } catch (err) {
@@ -24,14 +41,14 @@ export const TemperatureMonitoring = () => {
     fetchData();
     const interval = setInterval(fetchData, 5000);
     return () => clearInterval(interval);
-  }, []);
+  }, [triggerAlert]);
 
   const renderZoneCard = (zoneKey, readings) => {
     const currentReading = readings[readings.length - 1];
     const isAlert = currentReading?.isAlert;
 
     return (
-      <Card key={zoneKey} className={`overflow-hidden ${isAlert ? 'border-red-500' : ''}`}>
+      <Card key={zoneKey} className={`overflow-hidden ${isAlert ? 'border-red-500 shadow-lg' : ''}`}>
         <CardHeader className="space-y-0 pb-2">
           <div className="flex items-center justify-between">
             <CardTitle className="text-lg flex items-center gap-2">
@@ -85,7 +102,6 @@ export const TemperatureMonitoring = () => {
                   dot={{ r: 3 }}
                   activeDot={{ r: 5 }}
                 />
-                {/* Add threshold line */}
                 <Line
                   type="monotone"
                   dataKey={() => 70}
@@ -99,8 +115,8 @@ export const TemperatureMonitoring = () => {
             </ResponsiveContainer>
           </div>
           {isAlert && (
-            <div className="mt-2 p-2 bg-red-50 text-red-700 rounded-md text-sm">
-              Temperature exceeds threshold (70°C)
+            <div className="mt-2 p-2 bg-red-50 text-red-700 rounded-md text-sm font-medium animate-pulse">
+              ⚠️ Temperature exceeds safety threshold (70°C)
             </div>
           )}
         </CardContent>
