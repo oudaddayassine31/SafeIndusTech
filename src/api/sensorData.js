@@ -1,21 +1,12 @@
 // src/api/sensorData.js
 import axios from 'axios';
-const API_BASE_URL = '/api';
-const TEMPERATURE_THRESHOLD = 70; // Celsius
-const SMOKE_THRESHOLD = 0.3; // Adjusted threshold for smoke
-const MAX_HISTORY_POINTS = 10;
 
-const axiosInstance = axios.create({
-  baseURL: API_BASE_URL,
-  timeout: 5000,
-  headers: {
-    'Content-Type': 'application/json',
-  }
-});
+const API_BASE_URL = '/api';
+const MAX_HISTORY_POINTS = 100; // Store last 10 readings
 
 export const fetchZonesData = async () => {
   try {
-    const response = await axiosInstance.get('/zones/status');
+    const response = await axios.get(`${API_BASE_URL}/zones/status`);
     return response.data;
   } catch (error) {
     console.error('Error fetching zones data:', error);
@@ -23,110 +14,73 @@ export const fetchZonesData = async () => {
   }
 };
 
+// Transform temperature data with thresholds and alerts
 export const transformTemperatureData = (zonesData, previousData = {}) => {
   const temperatureData = {};
-  if (!Array.isArray(zonesData)) return temperatureData;
-  
-  zonesData.forEach((zone, index) => {
-    const zoneId = index + 1;
-    if (zone?.properties?.current_temp != null) {
-      const newReading = {
-        time: new Date().toLocaleTimeString(),
-        value: zone.properties.current_temp,
-        isAlert: zone.properties.current_temp > TEMPERATURE_THRESHOLD
-      };
-      
-      // Get previous readings or initialize empty array
-      const previousReadings = previousData[zoneId] || [];
-      
-      // Add new reading and keep last 10
-      temperatureData[zoneId] = [...previousReadings, newReading]
-        .slice(-MAX_HISTORY_POINTS);
+  const timestamp = new Date().toLocaleTimeString();
 
-      // Generate notification if threshold exceeded
-      if (newReading.isAlert) {
-        generateNotification({
-          type: 'temperature',
-          message: `High temperature (${newReading.value}°C) detected in ${zone.name}`,
-          severity: 'critical',
-          zoneId,
-          value: newReading.value
-        });
-      }
-    }
+  zonesData.forEach((zone) => {
+    const newReading = {
+      time: timestamp,
+      value: zone.properties.current_temp,
+      isAlert: zone.properties.current_temp > 70,
+      name: zone.name,
+      risk_level: zone.risk_level
+    };
+
+    const zoneKey = zone.name.replace(/\s+/g, '');
+    const prevReadings = previousData[zoneKey] || [];
+    temperatureData[zoneKey] = [...prevReadings, newReading].slice(-MAX_HISTORY_POINTS);
   });
+
   return temperatureData;
 };
 
+// Transform smoke data with thresholds
 export const transformSmokeData = (zonesData, previousData = {}) => {
   const smokeData = {};
-  if (!Array.isArray(zonesData)) return smokeData;
-  
-  zonesData.forEach((zone, index) => {
-    const zoneId = index + 1;
-    if (zone?.properties?.current_smoke != null) {
-      const value = zone.properties.current_smoke * 1000; // Convert to ppm
-      const newReading = {
-        time: new Date().toLocaleTimeString(),
-        value,
-        isAlert: zone.properties.current_smoke > SMOKE_THRESHOLD
-      };
-      
-      const previousReadings = previousData[zoneId] || [];
-      smokeData[zoneId] = [...previousReadings, newReading]
-        .slice(-MAX_HISTORY_POINTS);
+  const timestamp = new Date().toLocaleTimeString();
 
-      if (newReading.isAlert) {
-        generateNotification({
-          type: 'smoke',
-          message: `High smoke level (${value.toFixed(1)} ppm) detected in ${zone.name}`,
-          severity: 'critical',
-          zoneId,
-          value
-        });
-      }
-    }
+  zonesData.forEach((zone) => {
+    const value = zone.properties.current_smoke * 1000; // Convert to ppm
+    const newReading = {
+      time: timestamp,
+      value,
+      isAlert: zone.properties.current_smoke > 0.3,
+      name: zone.name,
+      risk_level: zone.risk_level
+    };
+
+    const zoneKey = zone.name.replace(/\s+/g, '');
+    const prevReadings = previousData[zoneKey] || [];
+    smokeData[zoneKey] = [...prevReadings, newReading].slice(-MAX_HISTORY_POINTS);
   });
+
   return smokeData;
 };
 
+// Transform spark/fire detection data
 export const transformFireData = (zonesData, previousData = {}) => {
   const fireData = {};
-  if (!Array.isArray(zonesData)) return fireData;
-  
-  zonesData.forEach((zone, index) => {
-    const zoneId = index + 1;
-    if (zone?.properties?.spark_detected != null) {
-      const newStatus = zone.properties.spark_detected ? 'Alert' : 'Normal';
-      fireData[zoneId] = {
-        status: newStatus,
-        time: new Date().toLocaleTimeString()
-      };
+  const timestamp = new Date().toLocaleTimeString();
 
-      if (newStatus === 'Alert') {
-        generateNotification({
-          type: 'fire',
-          message: `Fire alert detected in ${zone.name}`,
-          severity: 'critical',
-          zoneId
-        });
-      }
-    }
+  zonesData.forEach((zone) => {
+    const newReading = {
+      time: timestamp,
+      sparkDetected: zone.properties.spark_detected,
+      temperature: zone.properties.current_temp,
+      smoke: zone.properties.current_smoke,
+      name: zone.name,
+      risk_level: zone.risk_level,
+      isAlert: zone.properties.spark_detected || 
+               zone.properties.current_temp > 70 ||
+               zone.properties.current_smoke > 0.3
+    };
+
+    const zoneKey = zone.name.replace(/\s+/g, '');
+    const prevReadings = previousData[zoneKey] || [];
+    fireData[zoneKey] = [...prevReadings, newReading].slice(-MAX_HISTORY_POINTS);
   });
+
   return fireData;
-};
-
-// Notification handling
-let notificationCallback = () => {};
-
-export const setNotificationHandler = (callback) => {
-  notificationCallback = callback;
-};
-
-const generateNotification = (notification) => {
-  notificationCallback({
-    id: Date.now(),
-    ...notification,
-    timestamp: new Date().toISOString()
-  });
 };

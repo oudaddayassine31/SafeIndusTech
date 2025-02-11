@@ -1,6 +1,6 @@
 // src/components/layout/Sidebar.jsx
 import React from 'react';
-import { Map, Thermometer, Wind, Flame, Bell } from 'lucide-react';
+import { MapPin, Thermometer, Wind, Gauge, Zap, Bell } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 
 export const Sidebar = () => {
@@ -11,37 +11,48 @@ export const Sidebar = () => {
     { 
       id: "map", 
       label: "Factory Map", 
-      icon: Map, 
+      icon: MapPin, 
       path: "/",
-      description: "Interactive facility layout and sensor locations"
+      description: "Interactive facility layout and alerts"
     },
     { 
       id: "temperature", 
-      label: "Temperature Monitoring", 
+      label: "Temperature", 
       icon: Thermometer, 
       path: "/temperature",
-      description: "Temperature sensor readings by zone"
+      description: "Temperature monitoring",
+      threshold: "70°C"
+    },
+    { 
+      id: "pressure", 
+      label: "Pressure", 
+      icon: Gauge, 
+      path: "/pressure",
+      description: "Pressure monitoring",
+      threshold: "2.0 bar"
     },
     { 
       id: "smoke", 
-      label: "Smoke Detection", 
+      label: "Smoke", 
       icon: Wind, 
       path: "/smoke",
-      description: "Smoke sensor status and readings"
+      description: "Smoke detection",
+      threshold: "0.3 ppm"
     },
     { 
-      id: "fire", 
-      label: "Fire Detection", 
-      icon: Flame, 
-      path: "/fire",
-      description: "Fire detection system status"
+      id: "spark", 
+      label: "Spark", 
+      icon: Zap, 
+      path: "/spark",
+      description: "Spark detection",
+      threshold: "Any detection"
     },
     { 
       id: "notifications", 
-      label: "Notifications", 
+      label: "Alerts History", 
       icon: Bell, 
       path: "/notifications",
-      description: "System alerts and notifications"
+      description: "Alert history and acknowledgments"
     }
   ];
 
@@ -53,7 +64,7 @@ export const Sidebar = () => {
             key={item.id}
             onClick={() => navigate(item.path)}
             className={`
-              w-full flex items-center px-3 py-2 rounded-lg transition-colors
+              w-full flex items-center px-3 py-2 rounded-lg transition-colors relative group
               ${location.pathname === item.path 
                 ? "bg-red-50 text-red-700" 
                 : "text-gray-600 hover:bg-gray-50"
@@ -64,25 +75,20 @@ export const Sidebar = () => {
               location.pathname === item.path ? "text-red-600" : "text-gray-400"
             }`} />
             <span className="text-sm font-medium">{item.label}</span>
+            
+            {/* Info tooltip */}
+            <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-xs rounded 
+                          opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap z-50">
+              {item.description}
+              {item.threshold && (
+                <div className="mt-1 text-gray-300">
+                  Threshold: {item.threshold}
+                </div>
+              )}
+            </div>
           </button>
         ))}
       </nav>
-
-      <div className="p-4 border-t">
-        <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
-          System Status
-        </h2>
-        <div className="space-y-2">
-          <div className="flex items-center space-x-2 text-sm">
-            <div className="w-2 h-2 rounded-full bg-green-500"></div>
-            <span className="text-gray-600">All Sensors Active</span>
-          </div>
-          <div className="flex items-center space-x-2 text-sm">
-            <div className="w-2 h-2 rounded-full bg-green-500"></div>
-            <span className="text-gray-600">Network Connected</span>
-          </div>
-        </div>
-      </div>
     </aside>
   );
 };

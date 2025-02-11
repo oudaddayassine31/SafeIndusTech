@@ -10,8 +10,11 @@ import { Sidebar } from './components/layout/Sidebar';
 import { MapView } from './pages/MapView';
 import { TemperatureMonitoring } from './pages/TemperatureMonitoring';
 import { SmokeDetection } from './pages/SmokeDetection';
+import {SparkDetection} from './pages/SparkDetection';
+import {PressureMonitoring} from './pages/PressureMonitoring'
 import { FireDetection } from './pages/FireDetection';
 import { Notifications } from './pages/Notifications';
+import { SensorStatus } from './pages/SensorStatus';
 
 export default function App() {
   return (
@@ -25,9 +28,9 @@ export default function App() {
               <Route path="/" element={<MapView />} />
               <Route path="/temperature" element={<TemperatureMonitoring />} />
               <Route path="/smoke" element={<SmokeDetection />} />
-              <Route path="/fire" element={<FireDetection />} />
+              <Route path="/pressure" element={<PressureMonitoring />} />
               <Route path="/notifications" element={<Notifications />} />
-              {/* Add a catch-all route */}
+              <Route path="/spark" element={<SparkDetection />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </main>

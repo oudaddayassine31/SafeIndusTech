@@ -1,81 +1,81 @@
 // src/pages/Notifications.jsx
 import React, { useState, useEffect } from 'react';
-import { Bell, AlertTriangle, Thermometer, Wind, Flame } from 'lucide-react';
-import { Card } from '../components/ui/card';
-import { setNotificationHandler } from '../api/sensorData';
+import { Thermometer, Wind, Gauge, Zap } from 'lucide-react';
+import { alertService } from '../services/AlertService';
 
 export const Notifications = () => {
-  const [notifications, setNotifications] = useState([]);
+  const [alerts, setAlerts] = useState([]);
 
   useEffect(() => {
-    // Set up notification handler
-    setNotificationHandler((newNotification) => {
-      setNotifications(prev => {
-        // Add new notification and keep only last 50 notifications
-        const updated = [newNotification, ...prev].slice(0, 50);
-        // Store in localStorage
-        localStorage.setItem('safeIndusTechNotifications', JSON.stringify(updated));
-        return updated;
-      });
-    });
-
-    // Load previous notifications from localStorage
-    const storedNotifications = localStorage.getItem('safeIndusTechNotifications');
-    if (storedNotifications) {
-      setNotifications(JSON.parse(storedNotifications));
-    }
+    setAlerts(alertService.getAlerts());
+    return alertService.subscribe(setAlerts);
   }, []);
 
-  const getIcon = (type) => {
+  const getAlertIcon = (type) => {
     switch (type) {
-      case 'temperature':
-        return Thermometer;
-      case 'smoke':
-        return Wind;
-      case 'fire':
-        return Flame;
-      default:
-        return Bell;
+      case 'temperature': return Thermometer;
+      case 'pressure': return Gauge;
+      case 'smoke': return Wind;
+      case 'spark': return Zap;
+      default: return Thermometer;
     }
   };
 
-  const formatNotificationMessage = (notification) => {
-    const baseMessage = notification.message;
-    const time = new Date(notification.timestamp).toLocaleString();
-    return { baseMessage, time };
+  const handleAcknowledge = (alertId) => {
+    alertService.acknowledgeAlert(alertId);
   };
 
   return (
-    <div className="p-4">
-      <h2 className="text-2xl font-bold mb-6">System Notifications</h2>
+    <div className="p-6 max-w-4xl mx-auto">
+      <h2 className="text-2xl font-bold mb-6">Alert History</h2>
       <div className="space-y-4">
-        {notifications.map((notification) => {
-          const Icon = getIcon(notification.type);
-          const { baseMessage, time } = formatNotificationMessage(notification);
+        {alerts.map((alert) => {
+          const Icon = getAlertIcon(alert.type);
           return (
-            <Card key={notification.id} className="p-4">
-              <div className="flex items-start space-x-4">
-                <div className={`p-2 rounded-full ${
-                  notification.severity === 'critical' ? 'bg-red-100' : 'bg-yellow-100'
-                }`}>
-                  <Icon className={`h-6 w-6 ${
-                    notification.severity === 'critical' ? 'text-red-600' : 'text-yellow-600'
-                  }`} />
+            <div
+              key={alert.id}
+              className={`bg-white rounded-lg shadow p-4 border-l-4 ${
+                alert.acknowledged ? 'border-gray-300' : 'border-red-500'
+              }`}
+            >
+              <div className="flex items-start justify-between">
+                <div className="flex items-start space-x-3">
+                  <div className={`p-2 rounded-full ${
+                    alert.acknowledged ? 'bg-gray-100' : 'bg-red-100'
+                  }`}>
+                    <Icon className={`h-5 w-5 ${
+                      alert.acknowledged ? 'text-gray-600' : 'text-red-600'
+                    }`} />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-gray-900">
+                      {alert.message}
+                    </h3>
+                    <div className="mt-1 text-sm text-gray-600">
+                      <p>Zone: {alert.zoneName}</p>
+                      <p>Value: {alert.value}</p>
+                      <p>Threshold: {alert.threshold}</p>
+                    </div>
+                    <p className="mt-1 text-xs text-gray-500">
+                      {new Date(alert.timestamp).toLocaleString()}
+                    </p>
+                  </div>
                 </div>
-                <div className="flex-1">
-                  <p className="font-medium text-gray-900">{baseMessage}</p>
-                  <p className="text-sm text-gray-500">{time}</p>
-                </div>
-                {notification.severity === 'critical' && (
-                  <AlertTriangle className="h-6 w-6 text-red-600" />
+                {!alert.acknowledged && (
+                  <button
+                    onClick={() => handleAcknowledge(alert.id)}
+                    className="px-3 py-1 text-sm font-medium text-red-600 hover:bg-red-50 rounded-md"
+                  >
+                    Acknowledge
+                  </button>
                 )}
               </div>
-            </Card>
+            </div>
           );
         })}
-        {notifications.length === 0 && (
-          <div className="text-center text-gray-500 py-8">
-            No notifications yet
+        {alerts.length === 0 && (
+          <div className="text-center py-12 text-gray-500">
+            No alerts to display
           </div>
         )}
       </div>

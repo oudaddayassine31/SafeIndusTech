@@ -1,8 +1,113 @@
 // src/components/FactoryMap.jsx
 import React, { useState, useEffect } from 'react';
-import { MapContainer, TileLayer, GeoJSON, Marker, Popup, ZoomControl } from 'react-leaflet';
+import { MapContainer, TileLayer, GeoJSON, Marker, Popup, ZoomControl, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+
+// MovingEmployee Component
+const MovingEmployee = ({ route, speed = 0.3 }) => {
+  const [position, setPosition] = useState([0, 0]);
+  const [routeIndex, setRouteIndex] = useState(0);
+  const [segmentProgress, setSegmentProgress] = useState(0);
+  const map = useMap();
+
+  useEffect(() => {
+    if (!route || !route.geometry || !route.geometry.coordinates[0]) return;
+  
+    const coordinates = route.geometry.coordinates[0];
+    if (!coordinates[routeIndex + 1]) {
+      setRouteIndex(0);
+      setSegmentProgress(0);
+      return;
+    }
+  
+    const currentSegment = [coordinates[routeIndex], coordinates[routeIndex + 1]];
+    const distance = map.distance(
+      [currentSegment[0][1], currentSegment[0][0]],
+      [currentSegment[1][1], currentSegment[1][0]]
+    );
+    const timeToComplete = (distance / speed) * 1000;
+  
+    let animationFrame;
+    const startTime = Date.now();
+    
+    const animate = () => {
+      const elapsed = Date.now() - startTime;
+      const progress = Math.min(elapsed / timeToComplete, 1);
+      setSegmentProgress(progress);
+  
+      const lat = currentSegment[0][1] + (currentSegment[1][1] - currentSegment[0][1]) * progress;
+      const lng = currentSegment[0][0] + (currentSegment[1][0] - currentSegment[0][0]) * progress;
+      setPosition([lat, lng]);
+  
+      if (progress < 1) {
+        animationFrame = requestAnimationFrame(animate);
+      } else {
+        setRouteIndex(prev => prev + 1);
+        setSegmentProgress(0);
+      }
+    };
+  
+    animationFrame = requestAnimationFrame(animate);
+  
+    return () => {
+      cancelAnimationFrame(animationFrame);
+    };
+  }, [routeIndex]);
+
+  const employeeIcon = L.divIcon({
+    className: 'employee-marker',
+    html: `
+      <div class="relative group">
+        <div class="w-6 h-6 bg-blue-500 rounded-full border-2 border-white shadow-lg transform transition duration-200 ease-in-out hover:scale-110">
+          <div class="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-white px-2 py-1 
+                      rounded shadow-md text-xs font-medium opacity-0 group-hover:opacity-100 
+                      transition-opacity duration-200 whitespace-nowrap z-50">
+            ${route.properties.employee}
+          </div>
+        </div>
+      </div>
+    `,
+    iconSize: [20, 20],
+    iconAnchor: [10, 10],
+  });
+  
+
+  return position[0] !== 0 ? (
+    <Marker position={position} icon={employeeIcon}>
+      <Popup>
+        <div className="p-2">
+          <h3 className="font-bold">{route.properties.employee}</h3>
+          <p className="text-sm text-gray-600">On patrol</p>
+        </div>
+      </Popup>
+    </Marker>
+  ) : null;
+};
+
+// ZoneLabel component to handle zone labels properly
+const ZoneLabel = ({ position, name }) => {
+  const map = useMap();
+
+  useEffect(() => {
+    const label = L.marker(position, {
+      icon: L.divIcon({
+        className: 'zone-label',
+        html: `<div class="px-2 py-1 bg-white/80 backdrop-blur-sm rounded shadow-sm 
+                text-sm font-medium text-gray-800 whitespace-nowrap">
+                ${name}
+              </div>`
+      })
+    });
+
+    label.addTo(map);
+    return () => {
+      map.removeLayer(label);
+    };
+  }, [map, position, name]);
+
+  return null;
+};
 
 export const FactoryMap = () => {
   const [mapData, setMapData] = useState({
@@ -13,20 +118,96 @@ export const FactoryMap = () => {
     doors: null,
     wall: null
   });
+  const [employeeRoutes, setEmployeeRoutes] = useState(null);
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const files = {
+          usine: 'usine.geojson',
+          zones: 'zones.geojson',
+          sensors: 'sensors.geojson',
+          equipement: 'equipement.geojson',
+          doors: 'doors.geojson',
+          wall: 'wall.geojson',
+          routes: 'routes.geojson'
+        };
 
-  // Create SVG icons for different sensor types
+        const loadedData = {};
+        for (const [key, filename] of Object.entries(files)) {
+          try {
+            const response = await fetch(`/safeindustech/${filename}`);
+            if (!response.ok) throw new Error(`Failed to load ${filename}`);
+            const data = await response.json();
+            if (key === 'routes') {
+              setEmployeeRoutes(data);
+            } else {
+              loadedData[key] = data;
+            }
+          } catch (error) {
+            console.error(`Error loading ${filename}:`, error);
+          }
+        }
+        setMapData(loadedData);
+      } catch (error) {
+        console.error('Error loading map data:', error);
+      }
+    };
+
+    loadData();
+  }, []);
+
+  // Create sensor icons with different colors and symbols
   const createSensorIcon = (type) => {
-    const iconUrl = `/safeindustech/svg/${type}-Detection.svg`;
-    return L.icon({
-      iconUrl,
-      iconSize: [12, 12],
-      iconAnchor: [10, 10],
-      popupAnchor: [0, -12],
-      className: 'sensor-icon'
+    const sensorStyles = {
+      'Heat': {
+        color: '#ef4444',
+        icon: '🌡️',
+        pulseColor: '#fecaca'
+      },
+      'Pressure': {
+        color: '#3b82f6',
+        icon: '⭕',
+        pulseColor: '#bfdbfe'
+      },
+      'Smoke': {
+        color: '#6b7280',
+        icon: '💨',
+        pulseColor: '#e5e7eb'
+      },
+      'Spark': {
+        color: '#f59e0b',
+        icon: '⚡',
+        pulseColor: '#fde68a'
+      }
+    };
+  
+    const style = sensorStyles[type] || sensorStyles['Heat'];
+  
+    return L.divIcon({
+      className: 'custom-sensor-icon',
+      html: `
+        <div class="relative group">
+          <div class="absolute -top-1 -left-1 w-6 h-6 rounded-full animate-ping opacity-75"
+               style="background-color: ${style.pulseColor}">
+          </div>
+          <div class="relative w-4 h-4 rounded-full border-2 border-white shadow-lg flex items-center justify-center text-xs font-bold"
+               style="background-color: ${style.color}">
+            <span class="text-white">${style.icon}</span>
+          </div>
+          <div class="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-white/90 backdrop-blur-sm px-2 py-1 
+                      rounded shadow-md text-xs font-medium opacity-0 group-hover:opacity-100 
+                      transition-opacity duration-200 whitespace-nowrap z-50">
+            ${type} Sensor
+          </div>
+        </div>
+      `,
+      iconSize: [16, 16],
+      iconAnchor: [8, 8],
+      popupAnchor: [0, -8]
     });
   };
 
-  // Create equipment icons
+  // Equipment icons
   const createEquipmentIcon = (type) => {
     let iconUrl;
     switch (type.toLowerCase()) {
@@ -53,55 +234,83 @@ export const FactoryMap = () => {
     }
     return L.icon({
       iconUrl,
-      iconSize: [18, 18],
-      iconAnchor: [14, 14],
-      popupAnchor: [0, -12],
-      className: 'equipment-icon'
+      iconSize: [22, 22],
+      iconAnchor: [11, 11],
+      popupAnchor: [0, -10],
+      className: 'equipment-icon transition-transform hover:scale-110 duration-200'
     });
   };
 
-  // Zone styling based on risk level
   const getZoneStyle = (feature) => {
+    const zone = mapData.zones?.features.find(
+      z => z.properties.name === feature.properties.name
+    );
+    
+    if (!zone) return { fillOpacity: 0 };
+  
+    // Check if any sensor in the zone is in alert state
+    const isInDanger = zone.properties.current_temp > 70 ||
+                      zone.properties.current_pressure > 2.0 ||
+                      zone.properties.current_smoke > 0.3 ||
+                      zone.properties.spark_detected;
+  
+    if (isInDanger) {
+      return {
+        fillColor: '#ef4444',
+        fillOpacity: 0.6,
+        weight: 2,
+        color: '#dc2626',
+        className: 'danger-zone animate-pulse'
+      };
+    }
+  
     const riskColors = {
-      'High': '#ef444480',
-      'Medium': '#f9731680',
-      'Low': '#22c55e80'
+      'HIGH': '#ef4444',
+      'MEDIUM': '#f97316',
+      'LOW': '#22c55e'
     };
-
+  
     return {
-      fillColor: riskColors[feature.properties.risk_lvl] || '#64748b',
-      weight: 0, // No border
-      fillOpacity: 0.5
+      fillColor: riskColors[feature.properties.risk_level] || '#64748b',
+      weight: 0,
+      fillOpacity: 0.25
     };
   };
 
-  // Wall styling based on type
+  // Wall styling
   const getWallStyle = (feature) => {
     const wallStyles = {
       'N': {
         color: '#334155',
-        weight: 3,
-        opacity: 1,
-        dashArray: '4'
+        weight: 2.5,
+        opacity: 0.8,
+        dashArray: '4',
+        lineCap: 'round',
+        lineJoin: 'round',
+        className: 'wall-shadow'
       },
       'Cadre': {
         color: '#475569',
-        weight: 5,
-        opacity: 1,
-        dashArray: null
+        weight: 4,
+        opacity: 0.9,
+        dashArray: null,
+        lineCap: 'round',
+        lineJoin: 'round',
+        className: 'wall-border'
       }
     };
     
     return wallStyles[feature.properties.Type] || wallStyles['N'];
   };
 
-  // Factory outline styling
+  // Factory style
   const getFactoryStyle = () => ({
     fillColor: '#f8fafc',
-    weight: 0, // No border
-    fillOpacity: 0.1
+    weight: 0,
+    fillOpacity: 0.05
   });
 
+  // Load GeoJSON data
   useEffect(() => {
     const loadGeoData = async () => {
       try {
@@ -126,7 +335,6 @@ export const FactoryMap = () => {
         }
 
         setMapData(loadedData);
-        console.log('Loaded map data:', loadedData);
       } catch (error) {
         console.error('Error loading map data:', error);
       }
@@ -134,55 +342,66 @@ export const FactoryMap = () => {
 
     loadGeoData();
   }, []);
-    // Create unique keys for markers
-  const createUniqueKey = (prefix, properties) => {
-      return `${prefix}-${properties.id}-${properties.name || ''}-${Date.now()}`;
-    };
 
   return (
     <div className="h-full w-full relative">
       <MapContainer
         center={[30.994, -4.995]}
-        zoom={16}
+        zoom={17}
         className="h-full w-full"
         zoomControl={false}
+        minZoom={16}
+        maxZoom={19}
       >
         <ZoomControl position="bottomright" />
         
         <TileLayer
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
           attribution='&copy; OpenStreetMap contributors'
+          opacity={0.3}
         />
-
+  
         {mapData.usine && (
           <GeoJSON
             data={mapData.usine}
             style={getFactoryStyle}
           />
         )}
-
+  
         {mapData.zones && (
-          <GeoJSON
-            data={mapData.zones}
-            style={getZoneStyle}
-            onEachFeature={(feature, layer) => {
-              layer.bindPopup(`
-                <div class="p-2">
-                  <h3 class="font-bold">${feature.properties.name}</h3>
-                  <p>Risk Level: ${feature.properties.risk_lvl}</p>
-                </div>
-              `);
-            }}
-          />
+          <>
+            <GeoJSON
+              data={mapData.zones}
+              style={getZoneStyle}
+              onEachFeature={(feature, layer) => {
+                layer.bindPopup(`
+                  <div class="p-3">
+                    <h3 class="font-bold text-lg">${feature.properties.name}</h3>
+                    <p class="text-sm text-gray-600 mt-1">Risk Level: ${feature.properties.risk_lvl}</p>
+                  </div>
+                `);
+              }}
+            />
+            {mapData.zones.features.map((zone, index) => {
+              const bounds = L.geoJSON(zone).getBounds();
+              return (
+                <ZoneLabel
+                  key={`zone-label-${index}`}
+                  position={bounds.getCenter()}
+                  name={zone.properties.name}
+                />
+              );
+            })}
+          </>
         )}
-
+  
         {mapData.wall && (
           <GeoJSON
             data={mapData.wall}
             style={getWallStyle}
           />
         )}
-
+  
         {mapData.sensors?.features?.map((sensor) => (
           <Marker
             key={`sensor-${sensor.properties.id}`}
@@ -194,13 +413,13 @@ export const FactoryMap = () => {
           >
             <Popup>
               <div className="p-2">
-                <h3 className="font-bold">Sensor: {sensor.properties.Descrip}</h3>
-                <p>Zone: {sensor.properties.name}</p>
+                <h3 className="font-bold text-gray-800">{sensor.properties.Descrip} Sensor</h3>
+                <p className="text-sm text-gray-600">Zone: {sensor.properties.name}</p>
               </div>
             </Popup>
           </Marker>
         ))}
-
+  
         {mapData.equipement?.features?.map((equip) => (
           <Marker
             key={`equip-${equip.properties.id}`}
@@ -212,13 +431,13 @@ export const FactoryMap = () => {
           >
             <Popup>
               <div className="p-2">
-                <h3 className="font-bold">{equip.properties.type}</h3>
-                <p>Zone ID: {equip.properties.zone_id}</p>
+                <h3 className="font-bold text-gray-800">{equip.properties.type}</h3>
+                <p className="text-sm text-gray-600">Zone ID: {equip.properties.zone_id}</p>
               </div>
             </Popup>
           </Marker>
         ))}
-
+  
         {mapData.doors?.features?.map((door) => (
           <Marker
             key={`door-${door.properties.id}`}
@@ -227,109 +446,126 @@ export const FactoryMap = () => {
               door.geometry.coordinates[0]
             ]}
             icon={L.divIcon({
-                className: 'custom-exit-icon',
-                html: `
-                  <div class="relative group">
-                    <div class="w-8 h-8 bg-green-500 rounded flex items-center justify-center border-2 border-white">
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="white">
-                        <path d="M10.09 15.59L11.5 17l5-5-5-5-1.41 1.41L12.67 11H3v2h9.67l-2.58 2.59zM19 3H5a2 2 0 00-2 2v4h2V5h14v14H5v-4H3v4a2 2 0 002 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z"/>
-                      </svg>
-                    </div>
-                    <div class="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-white px-2 py-1 
-                                rounded shadow-md text-xs font-medium opacity-0 group-hover:opacity-100 
-                                transition-opacity whitespace-nowrap z-50">
-                      Sortie de Secours
-                    </div>
+              className: 'custom-exit-icon',
+              html: `
+                <div class="relative group">
+                  <div class="w-6 h-6 bg-green-500 rounded-lg flex items-center justify-center border-2 border-white 
+                            shadow-md transform hover:scale-110 transition-all duration-200">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="white">
+                      <path d="M10.09 15.59L11.5 17l5-5-5-5-1.41 1.41L12.67 11H3v2h9.67l-2.58 2.59zM19 3H5a2 2 0 00-2 2v4h2V5h14v14H5v-4H3v4a2 2 0 002 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z"/>
+                    </svg>
                   </div>
-                `,
-                iconSize: [16, 16],
-                iconAnchor: [12, 12],
-              })}
+                  <div class="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-white/90 backdrop-blur-sm px-2 py-1 
+                            rounded shadow-md text-xs font-medium opacity-0 group-hover:opacity-100 
+                            transition-opacity duration-200 whitespace-nowrap z-50">
+                    Sortie de Secours
+                  </div>
+                </div>
+              `,
+              iconSize: [24, 24],
+              iconAnchor: [12, 12],
+            })}
           >
             <Popup>
               <div className="p-2">
-                <h3 className="font-bold">Emergency Exit</h3>
-                <p>Door ID: {door.properties.id}</p>
+                <h3 className="font-bold text-gray-800">Emergency Exit</h3>
+                <p className="text-sm text-gray-600">Door ID: {door.properties.id}</p>
               </div>
             </Popup>
           </Marker>
         ))}
+  
+        {employeeRoutes?.features.map((route, index) => (
+          <MovingEmployee 
+            key={`employee-${index}`} 
+            route={route}
+            speed={5}
+          />
+        ))}
       </MapContainer>
-
-      {/* Legend */}
-      <div className="absolute bottom-4 right-4 bg-white p-4 rounded shadow-lg z-[1000]">
-        <h3 className="font-bold mb-2">Legend</h3>
-        <div className="space-y-3">
+  
+      <div className="absolute bottom-4 right-4 bg-white/90 backdrop-blur-sm p-4 rounded-lg shadow-lg z-[1000]">
+        <h3 className="font-bold mb-3 text-gray-800">Map Legend</h3>
+        <div className="space-y-4">
           <div>
-            <h4 className="text-sm font-medium mb-1">Risk Levels</h4>
-            <div className="space-y-1">
+            <h4 className="text-sm font-medium mb-2 text-gray-700">Risk Levels</h4>
+            <div className="space-y-1.5">
               <div className="flex items-center gap-2">
                 <div className="w-4 h-4 rounded bg-red-500 opacity-50"></div>
-                <span className="text-sm">High</span>
+                <span className="text-sm text-gray-600">High Risk</span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-4 h-4 rounded bg-orange-500 opacity-50"></div>
-                <span className="text-sm">Medium</span>
+                <span className="text-sm text-gray-600">Medium Risk</span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-4 h-4 rounded bg-green-500 opacity-50"></div>
-                <span className="text-sm">Low</span>
+                <span className="text-sm text-gray-600">Low Risk</span>
               </div>
             </div>
           </div>
-
+  
           <div>
-            <h4 className="text-sm font-medium mb-1">Sensors</h4>
-            <div className="grid grid-cols-2 gap-2">
+            <h4 className="text-sm font-medium mb-2 text-gray-700">Sensors</h4>
+            <div className="grid grid-cols-2 gap-x-4 gap-y-2">
               <div className="flex items-center gap-2">
-                <img src="/safeindustech/svg/Heat-Detection.svg" className="w-4 h-4" alt="Temperature" />
-                <span className="text-sm">Heat</span>
+                <div className="w-4 h-4 rounded-full bg-red-500 border border-white flex items-center justify-center">
+                  <span className="text-[10px] text-white">🌡️</span>
+                </div>
+                <span className="text-sm text-gray-600">Heat</span>
               </div>
               <div className="flex items-center gap-2">
-                <img src="/safeindustech/svg/Pression-Detection.svg" className="w-4 h-4" alt="Pressure" />
-                <span className="text-sm">Pressure</span>
+                <div className="w-4 h-4 rounded-full bg-blue-500 border border-white flex items-center justify-center">
+                  <span className="text-[10px] text-white">⭕</span>
+                </div>
+                <span className="text-sm text-gray-600">Pressure</span>
               </div>
               <div className="flex items-center gap-2">
-                <img src="/safeindustech/svg/Smoke-Detection.svg" className="w-4 h-4" alt="Smoke" />
-                <span className="text-sm">Smoke</span>
+                <div className="w-4 h-4 rounded-full bg-gray-500 border border-white flex items-center justify-center">
+                  <span className="text-[10px] text-white">💨</span>
+                </div>
+                <span className="text-sm text-gray-600">Smoke</span>
               </div>
               <div className="flex items-center gap-2">
-                <img src="/safeindustech/svg/Spark-Detection.svg" className="w-4 h-4" alt="Spark" />
-                <span className="text-sm">Spark</span>
+                <div className="w-4 h-4 rounded-full bg-amber-500 border border-white flex items-center justify-center">
+                  <span className="text-[10px] text-white">⚡</span>
+                </div>
+                <span className="text-sm text-gray-600">Spark</span>
               </div>
             </div>
           </div>
-
+  
           <div>
-            <h4 className="text-sm font-medium mb-1">Equipment</h4>
-            <div className="grid grid-cols-2 gap-2">
+            <h4 className="text-sm font-medium mb-2 text-gray-700">Equipment</h4>
+            <div className="grid grid-cols-2 gap-x-4 gap-y-2">
               <div className="flex items-center gap-2">
                 <img src="/safeindustech/svg/fire-extinguisher.svg" className="w-4 h-4" alt="Extinguisher" />
-                <span className="text-sm">Extinguisher</span>
+                <span className="text-sm text-gray-600">Extinguisher</span>
               </div>
               <div className="flex items-center gap-2">
                 <img src="/safeindustech/svg/fire-alarm.svg" className="w-4 h-4" alt="Alarm" />
-                <span className="text-sm">Alarm</span>
+                <span className="text-sm text-gray-600">Alarm</span>
               </div>
               <div className="flex items-center gap-2">
                 <img src="/safeindustech/svg/gas-mask.svg" className="w-4 h-4" alt="Safety Gear" />
-                <span className="text-sm">Safety Gear</span>
+                <span className="text-sm text-gray-600">Safety Gear</span>
               </div>
-              <div className="relative group flex items-center gap-2">
-                <div className="w-8 h-8 bg-green-500 rounded flex items-center justify-center border-2 border-white">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="white">
-                    <path d="M10.09 15.59L11.5 17l5-5-5-5-1.41 1.41L12.67 11H3v2h9.67l-2.58 2.59zM19 3H5a2 2 0 00-2 2v4h2V5h14v14H5v-4H3v4a2 2 0 002 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z"/>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 bg-green-500 rounded-lg flex items-center justify-center">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="white">
+                    <path d="M10.09 15.59L11.5 17l5-5-5-5-1.41 1.41L12.67 11H3v2h9.67l-2.58 2.59z"/>
                   </svg>
                 </div>
-                <span className="text-sm">Exit</span>
-                {/* Tooltip */}
-                <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-white px-2 py-1 
-                            rounded shadow-md text-xs font-medium opacity-0 group-hover:opacity-100 
-                            transition-opacity whitespace-nowrap z-50">
-                  Sortie de Secours
-                </div>
+                <span className="text-sm text-gray-600">Exit</span>
               </div>
-
+            </div>
+          </div>
+  
+          <div>
+            <h4 className="text-sm font-medium mb-2 text-gray-700">Personnel</h4>
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 bg-blue-500 rounded-full border-2 border-white"></div>
+              <span className="text-sm text-gray-600">Employee</span>
             </div>
           </div>
         </div>
@@ -337,3 +573,4 @@ export const FactoryMap = () => {
     </div>
   );
 };
+  
