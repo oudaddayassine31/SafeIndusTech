@@ -1,6 +1,5 @@
 // src/api/sensorData.js
 import axios from 'axios';
-
 const API_BASE_URL = '/api';
 const TEMPERATURE_THRESHOLD = 70; // Celsius
 const SMOKE_THRESHOLD = 0.3; // Adjusted threshold for smoke

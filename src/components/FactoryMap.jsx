@@ -20,7 +20,7 @@ export const FactoryMap = () => {
     return L.icon({
       iconUrl,
       iconSize: [12, 12],
-      iconAnchor: [8, 8],
+      iconAnchor: [10, 10],
       popupAnchor: [0, -12],
       className: 'sensor-icon'
     });
@@ -53,8 +53,8 @@ export const FactoryMap = () => {
     }
     return L.icon({
       iconUrl,
-      iconSize: [24, 24],
-      iconAnchor: [12, 12],
+      iconSize: [18, 18],
+      iconAnchor: [14, 14],
       popupAnchor: [0, -12],
       className: 'equipment-icon'
     });
@@ -242,8 +242,8 @@ export const FactoryMap = () => {
                     </div>
                   </div>
                 `,
-                iconSize: [32, 32],
-                iconAnchor: [16, 16],
+                iconSize: [16, 16],
+                iconAnchor: [12, 12],
               })}
           >
             <Popup>
