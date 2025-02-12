@@ -1,8 +1,32 @@
 // src/components/FactoryMap.jsx
 import React, { useState, useEffect } from 'react';
 import { MapContainer, TileLayer, GeoJSON, Marker, Popup, ZoomControl, useMap } from 'react-leaflet';
+import { AlertTriangle } from 'lucide-react';
+import { useAlert } from '../contexts/AlertContext';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+
+// Emergency Overlay Component
+const EmergencyOverlay = ({ zoneName, onClose }) => {
+  return (
+    <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-[2000]">
+      <div className="bg-red-50 border-2 border-red-500 rounded-lg shadow-lg p-4 flex items-center gap-4">
+        <AlertTriangle className="h-6 w-6 text-red-600" />
+        <div className="text-red-700">
+          <h3 className="font-bold">Emergency State - {zoneName}</h3>
+          <p className="text-sm">Critical conditions detected in this zone</p>
+        </div>
+        <button
+          onClick={onClose}
+          className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 
+                   transition-colors font-medium"
+        >
+          End Emergency State
+        </button>
+      </div>
+    </div>
+  );
+};
 
 // MovingEmployee Component
 const MovingEmployee = ({ route, speed = 0.3 }) => {
@@ -53,47 +77,40 @@ const MovingEmployee = ({ route, speed = 0.3 }) => {
     return () => {
       cancelAnimationFrame(animationFrame);
     };
-  }, [routeIndex]);
+  }, [routeIndex, route, speed, map]);
 
-// Update the employeeIcon in MovingEmployee component
-const employeeIcon = L.divIcon({
-  className: 'employee-marker',
-  html: `
-    <div class="relative group">
-      <!-- Main pulse animation -->
-      <div class="absolute -top-1.5 -left-1.5 w-9 h-9 rounded-full bg-blue-500/20 
-                  animate-ping"></div>
-      <!-- Secondary glow -->
-      <div class="absolute -top-1 -left-1 w-8 h-8 rounded-full bg-blue-400/30"></div>
-      <!-- Main icon container -->
-      <div class="relative w-6 h-6 bg-gradient-to-br from-blue-500 to-blue-600 
-                  rounded-full border-2 border-white shadow-lg flex items-center 
-                  justify-center transform hover:scale-110 transition-all duration-200">
-        <!-- Person icon -->
-        <svg class="w-4 h-4 text-white drop-shadow-md" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2a7.2 7.2 0 01-6-3.22c.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08a7.2 7.2 0 01-6 3.22z"/>
-        </svg>
-      </div>
-      <!-- Enhanced tooltip -->
-      <div class="absolute -top-12 left-1/2 transform -translate-x-1/2 
-                  bg-gradient-to-r from-blue-700 to-blue-600 text-white 
-                  px-3 py-1.5 rounded-full text-sm font-medium shadow-lg
-                  opacity-0 group-hover:opacity-100 transition-all duration-300
-                  whitespace-nowrap backdrop-blur-sm">
-        <div class="flex items-center gap-2">
-          <span>${route.properties.employee}</span>
-          <div class="w-1.5 h-1.5 rounded-full bg-blue-300 animate-pulse"></div>
+  const employeeIcon = L.divIcon({
+    className: 'employee-marker',
+    html: `
+      <div class="relative group">
+        <div class="absolute -top-1.5 -left-1.5 w-9 h-9 rounded-full bg-blue-500/20 
+                    animate-ping"></div>
+        <div class="absolute -top-1 -left-1 w-8 h-8 rounded-full bg-blue-400/30"></div>
+        <div class="relative w-6 h-6 bg-gradient-to-br from-blue-500 to-blue-600 
+                    rounded-full border-2 border-white shadow-lg flex items-center 
+                    justify-center transform hover:scale-110 transition-all duration-200">
+          <svg class="w-4 h-4 text-white drop-shadow-md" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2a7.2 7.2 0 01-6-3.22c.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08a7.2 7.2 0 01-6 3.22z"/>
+          </svg>
         </div>
-        <!-- Tooltip arrow -->
-        <div class="absolute -bottom-1 left-1/2 transform -translate-x-1/2 
-                    w-2 h-2 bg-blue-600 rotate-45"></div>
+        <div class="absolute -top-12 left-1/2 transform -translate-x-1/2 
+                    bg-gradient-to-r from-blue-700 to-blue-600 text-white 
+                    px-3 py-1.5 rounded-full text-sm font-medium shadow-lg
+                    opacity-0 group-hover:opacity-100 transition-all duration-300
+                    whitespace-nowrap backdrop-blur-sm">
+          <div class="flex items-center gap-2">
+            <span>${route.properties.employee}</span>
+            <div class="w-1.5 h-1.5 rounded-full bg-blue-300 animate-pulse"></div>
+          </div>
+          <div class="absolute -bottom-1 left-1/2 transform -translate-x-1/2 
+                      w-2 h-2 bg-blue-600 rotate-45"></div>
+        </div>
       </div>
-    </div>
-  `,
-  iconSize: [24, 24],
-  iconAnchor: [12, 12],
-  popupAnchor: [0, -12]
-});
+    `,
+    iconSize: [24, 24],
+    iconAnchor: [12, 12],
+    popupAnchor: [0, -12]
+  });
 
   return position[0] !== 0 ? (
     <Marker position={position} icon={employeeIcon}>
@@ -107,7 +124,7 @@ const employeeIcon = L.divIcon({
   ) : null;
 };
 
-// ZoneLabel component to handle zone labels properly
+// ZoneLabel Component
 const ZoneLabel = ({ position, name }) => {
   const map = useMap();
 
@@ -131,6 +148,7 @@ const ZoneLabel = ({ position, name }) => {
   return null;
 };
 
+// Main FactoryMap Component
 export const FactoryMap = () => {
   const [mapData, setMapData] = useState({
     usine: null,
@@ -141,42 +159,7 @@ export const FactoryMap = () => {
     wall: null
   });
   const [employeeRoutes, setEmployeeRoutes] = useState(null);
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        const files = {
-          usine: 'usine.geojson',
-          zones: 'zones.geojson',
-          sensors: 'sensors.geojson',
-          equipement: 'equipement.geojson',
-          doors: 'doors.geojson',
-          wall: 'wall.geojson',
-          routes: 'routes.geojson'
-        };
-
-        const loadedData = {};
-        for (const [key, filename] of Object.entries(files)) {
-          try {
-            const response = await fetch(`/safeindustech/${filename}`);
-            if (!response.ok) throw new Error(`Failed to load ${filename}`);
-            const data = await response.json();
-            if (key === 'routes') {
-              setEmployeeRoutes(data);
-            } else {
-              loadedData[key] = data;
-            }
-          } catch (error) {
-            console.error(`Error loading ${filename}:`, error);
-          }
-        }
-        setMapData(loadedData);
-      } catch (error) {
-        console.error('Error loading map data:', error);
-      }
-    };
-
-    loadData();
-  }, []);
+  const { activeAlert, acknowledgeAlert } = useAlert();
 
   // Create sensor icons with different colors and symbols
   const createSensorIcon = (type) => {
@@ -263,88 +246,26 @@ export const FactoryMap = () => {
     });
   };
 
+  // Enhanced zone styling with alert state
   const getZoneStyle = (feature) => {
-    // Get current sensor values for this zone
-    const zoneSensors = mapData.sensors?.features.filter(
-      sensor => sensor.properties.name === feature.properties.name
-    ) || [];
-  
-    // Check for different types of dangers
-    const hasTempDanger = zoneSensors.some(sensor => 
-      sensor.properties.Descrip === 'Heat' && sensor.properties.current_temp > 70
-    );
-    
-    const hasSmokeDanger = zoneSensors.some(sensor => 
-      sensor.properties.Descrip === 'Smoke' && sensor.properties.current_smoke > 0.3
-    );
-    
-    const hasPressureDanger = zoneSensors.some(sensor => 
-      sensor.properties.Descrip === 'Pressure' && sensor.properties.current_pressure > 2.0
-    );
-    
-    const hasSparkDanger = zoneSensors.some(sensor => 
-      sensor.properties.Descrip === 'Spark' && sensor.properties.spark_detected === true
-    );
-  
-    // If multiple dangers, use different styles
-    if (hasTempDanger && hasSmokeDanger) {
+    // Check if this zone has an active alert
+    if (activeAlert && feature.properties.name === activeAlert.zoneName) {
       return {
-        fillColor: '#7f1d1d', // dark red
+        fillColor: '#dc2626',
         fillOpacity: 0.7,
-        weight: 3,
-        color: '#dc2626',
-        className: 'danger-zone animate-pulse'
-      };
-    }
-  
-    // Individual danger types
-    if (hasTempDanger) {
-      return {
-        fillColor: '#ef4444', // red
-        fillOpacity: 0.6,
         weight: 2,
-        color: '#dc2626',
-        className: 'danger-zone animate-pulse'
+        color: '#991b1b',
+        className: 'emergency-zone animate-pulse'
       };
     }
-  
-    if (hasSmokeDanger) {
-      return {
-        fillColor: '#6b7280', // gray
-        fillOpacity: 0.6,
-        weight: 2,
-        color: '#4b5563',
-        className: 'danger-zone animate-pulse'
-      };
-    }
-  
-    if (hasPressureDanger) {
-      return {
-        fillColor: '#3b82f6', // blue
-        fillOpacity: 0.6,
-        weight: 2,
-        color: '#2563eb',
-        className: 'danger-zone animate-pulse'
-      };
-    }
-  
-    if (hasSparkDanger) {
-      return {
-        fillColor: '#f59e0b', // amber
-        fillOpacity: 0.6,
-        weight: 2,
-        color: '#d97706',
-        className: 'danger-zone animate-pulse'
-      };
-    }
-  
+
     // Regular zone styling based on risk level
     const riskColors = {
-      'HIGH': 'rgba(239, 68, 68, 0.3)',    // red with transparency
-      'MEDIUM': 'rgba(249, 115, 22, 0.3)',  // orange with transparency
-      'LOW': 'rgba(34, 197, 94, 0.3)'       // green with transparency
+      'HIGH': 'rgba(239, 68, 68, 0.3)',
+      'MEDIUM': 'rgba(249, 115, 22, 0.3)',
+      'LOW': 'rgba(34, 197, 94, 0.3)'
     };
-  
+
     return {
       fillColor: riskColors[feature.properties.risk_level] || '#64748b',
       weight: 0,
@@ -396,20 +317,25 @@ export const FactoryMap = () => {
           sensors: 'sensors.geojson',
           equipement: 'equipement.geojson',
           doors: 'doors.geojson',
-          wall: 'wall.geojson'
+          wall: 'wall.geojson',
+          routes: 'routes.geojson'
         };
 
         const loadedData = {};
-        
         for (const [key, filename] of Object.entries(files)) {
-          const response = await fetch(`/safeindustech/${filename}`);
-          if (!response.ok) {
-            console.error(`Failed to load ${filename}`);
-            continue;
+          try {
+            const response = await fetch(`/safeindustech/${filename}`);
+            if (!response.ok) throw new Error(`Failed to load ${filename}`);
+            const data = await response.json();
+            if (key === 'routes') {
+              setEmployeeRoutes(data);
+            } else {
+              loadedData[key] = data;
+            }
+          } catch (error) {
+            console.error(`Error loading ${filename}:`, error);
           }
-          loadedData[key] = await response.json();
         }
-
         setMapData(loadedData);
       } catch (error) {
         console.error('Error loading map data:', error);
@@ -436,14 +362,14 @@ export const FactoryMap = () => {
           attribution='&copy; OpenStreetMap contributors'
           opacity={0.3}
         />
-  
+
         {mapData.usine && (
           <GeoJSON
             data={mapData.usine}
             style={getFactoryStyle}
           />
         )}
-  
+
         {mapData.zones && (
           <>
             <GeoJSON
@@ -453,7 +379,7 @@ export const FactoryMap = () => {
                 layer.bindPopup(`
                   <div class="p-3">
                     <h3 class="font-bold text-lg">${feature.properties.name}</h3>
-                    <p class="text-sm text-gray-600 mt-1">Risk Level: ${feature.properties.risk_lvl}</p>
+                    <p class="text-sm text-gray-600 mt-1">Risk Level: ${feature.properties.risk_level}</p>
                   </div>
                 `);
               }}
@@ -470,7 +396,7 @@ export const FactoryMap = () => {
             })}
           </>
         )}
-  
+
         {mapData.wall && (
           <GeoJSON
             data={mapData.wall}
@@ -478,28 +404,27 @@ export const FactoryMap = () => {
           />
         )}
 
-  
         {mapData.sensors?.features?.map((sensor) => {
-        const uniqueKey = `sensor-${sensor.properties.id}-${sensor.properties.name}-${sensor.properties.Descrip}`;
-        return (
-          <Marker
-            key={uniqueKey}
-            position={[
-              sensor.geometry.coordinates[1],
-              sensor.geometry.coordinates[0]
-            ]}
-            icon={createSensorIcon(sensor.properties.Descrip)}
-          >
-            <Popup>
-              <div className="p-2">
-                <h3 className="font-bold text-gray-800">{sensor.properties.Descrip} Sensor</h3>
-                <p className="text-sm text-gray-600">Zone: {sensor.properties.name}</p>
-              </div>
-            </Popup>
-          </Marker>
-        );
-      })}
-  
+          const uniqueKey = `sensor-${sensor.properties.id}-${sensor.properties.name}-${sensor.properties.Descrip}`;
+          return (
+            <Marker
+              key={uniqueKey}
+              position={[
+                sensor.geometry.coordinates[1],
+                sensor.geometry.coordinates[0]
+              ]}
+              icon={createSensorIcon(sensor.properties.Descrip)}
+            >
+              <Popup>
+                <div className="p-2">
+                  <h3 className="font-bold text-gray-800">{sensor.properties.Descrip} Sensor</h3>
+                  <p className="text-sm text-gray-600">Zone: {sensor.properties.name}</p>
+                </div>
+              </Popup>
+            </Marker>
+          );
+        })}
+
         {mapData.equipement?.features?.map((equip) => (
           <Marker
             key={`equip-${equip.properties.id}`}
@@ -517,7 +442,7 @@ export const FactoryMap = () => {
             </Popup>
           </Marker>
         ))}
-  
+
         {mapData.doors?.features?.map((door) => (
           <Marker
             key={`door-${door.properties.id}`}
@@ -554,7 +479,7 @@ export const FactoryMap = () => {
             </Popup>
           </Marker>
         ))}
-  
+
         {employeeRoutes?.features.map((route, index) => (
           <MovingEmployee 
             key={`employee-${index}`} 
@@ -563,7 +488,14 @@ export const FactoryMap = () => {
           />
         ))}
       </MapContainer>
-  
+
+      {activeAlert && (
+        <EmergencyOverlay 
+          zoneName={activeAlert.zoneName}
+          onClose={() => acknowledgeAlert(activeAlert.id)}
+        />
+      )}
+
       <div className="absolute bottom-4 right-4 bg-white/90 backdrop-blur-sm p-4 rounded-lg shadow-lg z-[1000]">
         <h3 className="font-bold mb-3 text-gray-800">Map Legend</h3>
         <div className="space-y-4">
@@ -584,7 +516,7 @@ export const FactoryMap = () => {
               </div>
             </div>
           </div>
-  
+
           <div>
             <h4 className="text-sm font-medium mb-2 text-gray-700">Sensors</h4>
             <div className="grid grid-cols-2 gap-x-4 gap-y-2">
@@ -614,7 +546,7 @@ export const FactoryMap = () => {
               </div>
             </div>
           </div>
-  
+
           <div>
             <h4 className="text-sm font-medium mb-2 text-gray-700">Equipment</h4>
             <div className="grid grid-cols-2 gap-x-4 gap-y-2">
@@ -640,7 +572,7 @@ export const FactoryMap = () => {
               </div>
             </div>
           </div>
-  
+
           <div>
             <h4 className="text-sm font-medium mb-2 text-gray-700">Personnel</h4>
             <div className="flex items-center gap-2">
@@ -653,4 +585,3 @@ export const FactoryMap = () => {
     </div>
   );
 };
-  

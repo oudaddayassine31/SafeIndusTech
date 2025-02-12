@@ -4,7 +4,6 @@ import { useNavigate } from 'react-router-dom';
 
 const AlertContext = createContext();
 
-// This is the hook that was missing
 export const useAlert = () => {
   const context = useContext(AlertContext);
   if (!context) {

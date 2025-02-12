@@ -2,7 +2,14 @@
 import axios from 'axios';
 
 const API_BASE_URL = '/api';
-const MAX_HISTORY_POINTS = 100; // Store last 10 readings
+const MAX_HISTORY_POINTS = 100;
+
+export const THRESHOLDS = {
+  temperature: { value: 70, unit: '°C' },
+  pressure: { value: 2.0, unit: 'bar' },
+  smoke: { value: 0.3, unit: 'ppm' },
+  spark: { value: true, unit: '' }
+};
 
 export const fetchZonesData = async () => {
   try {
@@ -14,18 +21,20 @@ export const fetchZonesData = async () => {
   }
 };
 
-// Transform temperature data with thresholds and alerts
 export const transformTemperatureData = (zonesData, previousData = {}) => {
   const temperatureData = {};
   const timestamp = new Date().toLocaleTimeString();
 
   zonesData.forEach((zone) => {
+    const isAlert = zone.properties.current_temp > THRESHOLDS.temperature.value;
     const newReading = {
       time: timestamp,
       value: zone.properties.current_temp,
-      isAlert: zone.properties.current_temp > 70,
+      isAlert,
       name: zone.name,
-      risk_level: zone.risk_level
+      risk_level: zone.risk_level,
+      threshold: THRESHOLDS.temperature.value,
+      unit: THRESHOLDS.temperature.unit
     };
 
     const zoneKey = zone.name.replace(/\s+/g, '');
@@ -36,19 +45,21 @@ export const transformTemperatureData = (zonesData, previousData = {}) => {
   return temperatureData;
 };
 
-// Transform smoke data with thresholds
 export const transformSmokeData = (zonesData, previousData = {}) => {
   const smokeData = {};
   const timestamp = new Date().toLocaleTimeString();
 
   zonesData.forEach((zone) => {
-    const value = zone.properties.current_smoke * 1000; // Convert to ppm
+    const value = zone.properties.current_smoke * 1000;
+    const isAlert = zone.properties.current_smoke > THRESHOLDS.smoke.value;
     const newReading = {
       time: timestamp,
       value,
-      isAlert: zone.properties.current_smoke > 0.3,
+      isAlert,
       name: zone.name,
-      risk_level: zone.risk_level
+      risk_level: zone.risk_level,
+      threshold: THRESHOLDS.smoke.value * 1000,
+      unit: THRESHOLDS.smoke.unit
     };
 
     const zoneKey = zone.name.replace(/\s+/g, '');
@@ -59,28 +70,48 @@ export const transformSmokeData = (zonesData, previousData = {}) => {
   return smokeData;
 };
 
-// Transform spark/fire detection data
-export const transformFireData = (zonesData, previousData = {}) => {
-  const fireData = {};
+export const transformPressureData = (zonesData, previousData = {}) => {
+  const pressureData = {};
   const timestamp = new Date().toLocaleTimeString();
 
   zonesData.forEach((zone) => {
+    const isAlert = zone.properties.current_pressure > THRESHOLDS.pressure.value;
     const newReading = {
       time: timestamp,
-      sparkDetected: zone.properties.spark_detected,
-      temperature: zone.properties.current_temp,
-      smoke: zone.properties.current_smoke,
+      value: zone.properties.current_pressure,
+      isAlert,
       name: zone.name,
       risk_level: zone.risk_level,
-      isAlert: zone.properties.spark_detected || 
-               zone.properties.current_temp > 80 ||
-               zone.properties.current_smoke > 0.3
+      threshold: THRESHOLDS.pressure.value,
+      unit: THRESHOLDS.pressure.unit
     };
 
     const zoneKey = zone.name.replace(/\s+/g, '');
     const prevReadings = previousData[zoneKey] || [];
-    fireData[zoneKey] = [...prevReadings, newReading].slice(-MAX_HISTORY_POINTS);
+    pressureData[zoneKey] = [...prevReadings, newReading].slice(-MAX_HISTORY_POINTS);
   });
 
-  return fireData;
+  return pressureData;
+};
+
+export const transformSparkData = (zonesData, previousData = {}) => {
+  const sparkData = {};
+  const timestamp = new Date().toLocaleTimeString();
+
+  zonesData.forEach((zone) => {
+    const isAlert = zone.properties.spark_detected === THRESHOLDS.spark.value;
+    const newReading = {
+      time: timestamp,
+      sparkDetected: zone.properties.spark_detected,
+      name: zone.name,
+      risk_level: zone.risk_level,
+      isAlert
+    };
+
+    const zoneKey = zone.name.replace(/\s+/g, '');
+    const prevReadings = previousData[zoneKey] || [];
+    sparkData[zoneKey] = [...prevReadings, newReading].slice(-MAX_HISTORY_POINTS);
+  });
+
+  return sparkData;
 };
